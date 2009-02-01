@@ -17,6 +17,10 @@ the result.
 
 It automatically resizes itself when moved onto or from the Desktop and Sidebar.
 
+If the standard output of the command contains HTML, the gadget will display it 
+as HTML. (the non-HTML part of the message is ignored. Only XHTML allowed.)
+If the standard output is not HTML, it will be directly displayed.
+
 
 =================================
 == Installation
