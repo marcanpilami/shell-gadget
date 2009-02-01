@@ -124,6 +124,7 @@ function refresh()
       errormsg = errormsg + "La page ne sera pas affichée par le gadget.";
       _WshShell.Popup(errormsg, 0, "Document XHTML invalide", 16);
     }
+    var new_body = xmlDoc.getElementsByTagName("body")[0];
     
     // Target div is all_body, empty it first...
     while (target_body.hasChildNodes()) {target_body.removeChild(target_body.firstChild);} 
