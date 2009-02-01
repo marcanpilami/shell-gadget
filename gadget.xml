@@ -1,14 +1,14 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <gadget>
 	<name>Gadget shell</name>
 	<namespace>SHELL</namespace>
 	<version>1.0</version>
 	<author name="Marc-Antoine Gouillart">
-		 <info url="www.marsupilami.com" />
+		 <info url="http://github.com/marcanpilami/shell-gadget/tree/WithTmpFile" />
 		 <logo src="icon.jpg"/>
 	</author>
 	<copyright>2009</copyright>
-	<description>Lance une ligne de commande et affiche le résultat à intervalles réguliers</description>
+	<description>Periodically runs a command line and displays the result</description>
 	
 	<icons>
 	   <icon height="48" width="48" src="icon.jpg"/>
