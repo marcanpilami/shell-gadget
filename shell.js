@@ -85,7 +85,7 @@ function refresh()
   
   try 
   {
-    var of = _FSO.OpenTextFile(tmpFileErr, 1, true, -1);
+    var of = _FSO.OpenTextFile(tmpFileErr, 1, true, -2);
     errors = of.ReadAll();
     of.Close();
   }
