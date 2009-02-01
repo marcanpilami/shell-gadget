@@ -1,22 +1,29 @@
+/*
+  Main gadget script
+  
+  @copyright: Marc-Antoine Gouillart, 2009
+  @licence: GPLv3
+*/
+
+
+
 /* Set global vars */
 var _Cmd = "";
 var _Prm = "";
 var _Rfr = 10;
+
 var _WshShell = new ActiveXObject("WScript.Shell");
+var _FSO  = new ActiveXObject("Scripting.FileSystemObject"); 
+
+var tmpFileOut = System.Gadget.path + "\\gadgettempout.txt"
+var tmpFileErr = System.Gadget.path + "\\gadgettemperr.txt"
 
 /* Default values */
-//var default_Cmd = "dir";
-//var default_Prm = "%userprofile%";
-var default_Cmd = "C:\\Python25\\python.exe C:\\yokadi\\yokadi.py";
-var default_Prm = '--db %USERPROFILE%\\.yokadi.db "t_list -f html"';
+var default_Cmd = "dir";
+var default_Prm = "%userprofile%";
+//var default_Cmd = "C:\\Python25\\python.exe C:\\yokadi\\yokadi.py";
+//var default_Prm = '--db %USERPROFILE%\\.yokadi.db "t_list -f html"';
 var default_Rfr = 10;
-
-/* Envt vars (init once and for all)*/
-var envt = _WshShell.Environment("VOLATILE");
-envt.Item("STDOUT") = "none";
-envt.Item("STDERR")="none";
-envt.Item("STDIN")="none";
-envt.Item("CMDTORUN")="none";
 
 /* Gadget inits */
 System.Gadget.settingsUI = "settings.html";      // we have a settings page
@@ -30,13 +37,13 @@ onerror = handleErrors;
 var msg = null;
 function handleErrors(errorMessage, url, line)
 {
-  msg = "Erreur non gérée dans le gadget\n\n";
-  msg += "Une erreur est survenue dans le traitement\n";
-  msg += "Pressez OK pour continuer\n\n";
-  msg += "Erreur : " + errorMessage + "\n";
+  msg = "Unhandled error\n\n";
+  msg += "An error occured during processing\n";
+  msg += "Press OK to continue\n\n";
+  msg += "Error : " + errorMessage + "\n";
   msg += "URL: " + url + "\n";
-  msg += "Ligne #: " + line;
-  _WshShell.Popup(msg, 0, "Erreur du gadget", 16);
+  msg += "Line #: " + line;
+  _WshShell.Popup(msg, 0, "Shell gadget error", 16);
   return true
 }
 //
@@ -54,57 +61,53 @@ function refresh()
                                                   // (We need a fixed-width font)
   // Command line to run
   var cmd = _Cmd + " " + _Prm;
-  //_WshShell.Popup(cmd);
 	target_body.innerHTML = cmd;
-	//_WshShell.Popup("1");
 
-
-  // OK, now don't laugh. The only way in Windows to run a command line
-  // minimized AND have access to stdout/err/in is to use a subscript called
-  // via WshShell.Run (which allows hidden launch). The subscript in turn uses
-  // WshShell.Exec (which gives access to the stdio, but cannot run hidden).
-  // The subscript then returns the stdout to the main script via an 
-  // environment variable. 
-  // Note that we MUST specify cscript as the interpretor for the second
-  // script, or else it would choose wsh which always shows up front!
-  // (we could also use file redirection, but we don't want any files here) 
-  
-  // Volatile vars are not written in the registry and are passed to 
-  // subprocesses.		
-  //envt.Item("STDOUT") = "none";
-  //envt.Item("STDERR") = "none";
-  envt.Item("CMDTORUN") = cmd;
-  //_WshShell.Popup("2");
-  
-  // Subscript launch
-  var toRun = "\"cscript\" \"" + System.Gadget.path + "\\start_me_up.js\"";    
+  toRun="cmd.exe /D /U /C chcp 1252 && " + cmd + " >\"" + tmpFileOut + "\" 2>\"" + tmpFileErr + "\"";
+  //_WshShell.Popup(toRun);
+  // Script launch
   var res = _WshShell.Run(toRun, 0, true);
-  if (res != 0)
+  
+  // Get result outputs
+  var errors = "";
+  var output = "no output";
+  
+  /* NOTE: here, we cannot test the length of the file befoire opening it, as
+  the file may not already have been flushed to disk... So we use try/catch 
+  instead */
+  try
   {
-    _WshShell.Popup("Erreur de ligne de commande");
-    return 1;
+    var of = _FSO.OpenTextFile(tmpFileOut, 1, true, -1);
+    output = of.ReadAll();
+    of.Close();
   }
-  //_WshShell.Popup("3");
-  // get results
-  output = envt.Item("STDOUT");
-  errors = envt.Item("STDERR");
+  catch(err) {}
+  
+  try 
+  {
+    var of = _FSO.OpenTextFile(tmpFileErr, 1, true, -1);
+    errors = of.ReadAll();
+    of.Close();
+  }
+  catch(err) {}
+  
   
   // Error "handling"
-  if (errors.length != 0)
+  if (errors.length != 0 || res != 0)
   {
-    _WshShell.Popup(errors, 0, "Erreurs commande shell", 16);
+    _WshShell.Popup(errors, 0, "An error occured while running the command", 16);
+    return 1;
   }
-  //_WshShell.Popup(output);
-  //_WshShell.Popup("4");
   
   if (output.search(/<html>/i) != -1)
   {
-    // Replace whole web page by the one returned      
+    ////////////////////////////////////////////////////////////////////////////
+    // HTML -> HTML formatting : Replace whole web page by the one returned 
+    // 
     var start = output.search(/<html>/i);
     output = output.substr(start);
     var stop = output.search(/<.html>/i) + 7;
     output = output.substr(0,stop);
-    //_WshShell.Popup(output);
     
     // Remove legacy ANSI HTML codes in favor of XML parsable Unicode codes
     output = output.replace(/&nbsp;/g, "&#160;");
@@ -122,23 +125,17 @@ function refresh()
       _WshShell.Popup(errormsg, 0, "Document XHTML invalide", 16);
     }
     
-    // replace HTML with new document      
-    var new_body = xmlDoc.getElementsByTagName("body")[0];
-    //_WshShell.Popup(new_body.childNodes.length);
-    
-    // target div is all_body, empty it first
-    while (target_body.hasChildNodes()) {target_body.removeChild(target_body.firstChild);}
+    // Target div is all_body, empty it first...
+    while (target_body.hasChildNodes()) {target_body.removeChild(target_body.firstChild);} 
   
-  
+    // ... then fill it again
     target_body.innerHTML = new_body.xml;   // No you're not dreaming... the 
           // only way to put an XML DOM node into an HTML DOM node in IE is 
           // to use the text properties... 
     target_body.style.fontFamily="Segoe UI"
     target_body.style.fontSize="10pt";
-    //document.innerHTML = xmlDoc.documentElement.xml;
-    
-    //var d = output.substr(start, stop);
-    //_WshShell.Popup(output);
+    //
+    ////////////////////////////////////////////////////////////////////////////
   }
   else
   { 	
@@ -150,14 +147,6 @@ function refresh()
     output = output.replace(/\u003c/g, "&lt;");        // < sign
     output = output.replace(/\u003e/g, "&gt;");        // > sign
     output = output.replace(/\u000d\u000a/g, "<br/>"); // CL+CR
-    
-    // remove first lines of stdio (windows console garbage)
-    for (i=0; i<9; i++)
-    {
-      output = output.substr(output.indexOf("<br/>") + 5);
-    } 
-    // remove last line (exit)
-    output = output.replace(/.exit/g, "");
     
     // Update gadget web page
     target_body.innerHTML = output;

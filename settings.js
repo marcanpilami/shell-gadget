@@ -1,4 +1,9 @@
-
+/*
+  Gadget settings script
+  
+  @copyright: Marc-Antoine Gouillart, 2009
+  @licence: GPLv3
+*/
 
 function init() 
 {
