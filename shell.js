@@ -63,7 +63,7 @@ function refresh()
   var cmd = _Cmd + " " + _Prm;
 	target_body.innerHTML = cmd;
 
-  toRun="cmd.exe /D /U /C chcp 1252 && " + cmd + " >\"" + tmpFileOut + "\" 2>\"" + tmpFileErr + "\"";
+  toRun="cmd.exe /D /U /C chcp 65001 && " + cmd + " >\"" + tmpFileOut + "\" 2>\"" + tmpFileErr + "\"";
   //_WshShell.Popup(toRun);
   // Script launch
   var res = _WshShell.Run(toRun, 0, true);
@@ -77,7 +77,7 @@ function refresh()
   instead */
   try
   {
-    var of = _FSO.OpenTextFile(tmpFileOut, 1, true, -1);
+    var of = _FSO.OpenTextFile(tmpFileOut, 1, true, -2);
     output = of.ReadAll();
     of.Close();
   }
